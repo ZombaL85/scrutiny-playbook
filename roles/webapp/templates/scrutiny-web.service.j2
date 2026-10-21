@@ -1,0 +1,30 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Scrutiny web UI and API
+Wants=network-online.target
+After=network-online.target{% if scrutiny_influxdb_install | bool %} influxdb.service{% endif %}
+
+
+[Service]
+Type=simple
+User={{ scrutiny_user }}
+Group={{ scrutiny_group }}
+ExecStart={{ scrutiny_web_bin }} start --config {{ scrutiny_install_dir }}/config/scrutiny.yaml
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths={{ scrutiny_install_dir }}/config
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

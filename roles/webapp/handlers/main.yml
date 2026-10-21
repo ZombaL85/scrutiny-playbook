@@ -1,0 +1,6 @@
+---
+- name: Restart scrutiny-web
+  ansible.builtin.systemd_service:
+    name: scrutiny-web
+    state: restarted
+    daemon_reload: true

@@ -1,0 +1,24 @@
+---
+scrutiny_user: scrutiny
+scrutiny_group: scrutiny
+scrutiny_web_bin: /usr/local/bin/scrutiny-web
+
+scrutiny_web_listen_host: "0.0.0.0"
+# Set e.g. "/scrutiny" when serving behind a path-prefixed reverse proxy.
+scrutiny_web_basepath: ""
+# Empty = log to stdout (journald: journalctl -u scrutiny-web).
+scrutiny_log_file: ""
+scrutiny_log_level: INFO
+
+scrutiny_influxdb_scheme: http
+scrutiny_influxdb_host: localhost
+scrutiny_influxdb_port: 8086
+scrutiny_influxdb_org: scrutiny
+scrutiny_influxdb_bucket: metrics
+scrutiny_influxdb_init_username: admin
+scrutiny_influxdb_retention_policy: true
+scrutiny_influxdb_tls_insecure_skip_verify: false
+
+# Shoutrrr notification URLs, e.g. ["ntfy://ntfy.sh/my-topic"].
+# They may contain credentials - keep them in the vault.
+scrutiny_notify_urls: []

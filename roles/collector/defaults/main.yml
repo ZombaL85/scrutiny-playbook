@@ -1,0 +1,18 @@
+---
+scrutiny_collector_bin: /usr/local/bin/scrutiny-collector-metrics
+
+# Address of the hub. Uses ansible_host of the first scrutiny_web host if set.
+scrutiny_collector_api_endpoint: >-
+  http://{{ hostvars[groups['scrutiny_web'][0]]['ansible_host'] | default(groups['scrutiny_web'][0]) }}:{{ scrutiny_web_port }}
+
+# Label used to group this machine's drives in the dashboard ("" = none).
+scrutiny_collector_host_id: "{{ inventory_hostname }}"
+
+# systemd OnCalendar expression. Scrutiny's downsampling assumes roughly
+# daily collection - running it much more often bloats InfluxDB.
+scrutiny_collector_schedule: "*-*-* 01:00:00"
+scrutiny_collector_randomized_delay: 15min
+
+# Run the collector once right after it is installed/upgraded,
+# so the dashboard is populated without waiting for the timer.
+scrutiny_collector_run_after_install: true

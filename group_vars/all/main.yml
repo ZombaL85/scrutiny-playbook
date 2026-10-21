@@ -1,0 +1,38 @@
+---
+# Scrutiny release to install. When bumping the version, add the matching
+# SHA256 digests below (they are shown next to each asset on the GitHub
+# release page). Downloads are verified, so a missing entry fails the run.
+scrutiny_version: "v0.9.5"
+
+scrutiny_checksums:
+  v0.9.5:
+    scrutiny-web-linux-amd64: "b42e2c702854e7ef852dbc64b5d2ac0113b8e19cd1196d7164d119f3b0442f3c"
+    scrutiny-web-linux-arm64: "667ecfa78a11bed0481e5db2f75a07de1150837c40d11250eeb5e1eba559c381"
+    scrutiny-web-linux-arm-7: "63db4f8f75d5a68a3c86883c77f199ac1f26b6ddc94dce1cb96d6f4753a86d9a"
+    scrutiny-web-linux-arm-6: "742cc397953f8b66dd7db7401bc5810c57e9e24fe03ebd99eed1665aac2a84e5"
+    scrutiny-collector-metrics-linux-amd64: "a7745fe3d4282857be07089298a4fa29b1f34e50fc7cc1c054b2945dd9edc320"
+    scrutiny-collector-metrics-linux-arm64: "690a9fc743480a8c83b3c8c5c7dedc437a7ec434dad5bc63153f70e8b72cd845"
+    scrutiny-collector-metrics-linux-arm-7: "b6edbf4e1048ae4d10318cd17309a254fb093b3bf0b31c346053dd18ec8ac350"
+    scrutiny-collector-metrics-linux-arm-6: "6441d2cc26006a87d2473e396fc372f463976c090153619c165e46459afa3b01"
+    scrutiny-web-frontend.tar.gz: "0c895ede4ac9d93ba549c5dedc7dcfd7c82b593bb37f2ae91fffce9cc16d9763"
+
+scrutiny_download_base: "https://github.com/AnalogJ/scrutiny/releases/download/{{ scrutiny_version }}"
+
+# ansible_architecture -> Scrutiny release asset suffix
+scrutiny_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: arm-7
+  armv6l: arm-6
+
+scrutiny_install_dir: /opt/scrutiny
+scrutiny_web_port: 8080
+
+# Install InfluxDB 2.x on the web (hub) host. Set to false if you point
+# Scrutiny at an existing InfluxDB (see scrutiny_influxdb_* in roles/webapp).
+scrutiny_influxdb_install: true
+
+# Secrets - define these in group_vars/all/vault.yml (ansible-vault encrypted),
+# see group_vars/all/vault.yml.example:
+#   scrutiny_influxdb_token
+#   scrutiny_influxdb_init_password

@@ -1,0 +1,2 @@
+# never commit an unencrypted vault
+*.retry

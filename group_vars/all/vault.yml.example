@@ -1,0 +1,12 @@
+---
+# Copy to vault.yml and encrypt it:
+#   cp group_vars/all/vault.yml.example group_vars/all/vault.yml
+#   ansible-vault encrypt group_vars/all/vault.yml
+#
+# On a NEW install Scrutiny onboards InfluxDB with these values on first start.
+# On an EXISTING install (playbook versions before this one), InfluxDB was
+# onboarded with Scrutiny's built-in defaults, so keep:
+#   scrutiny_influxdb_token: "scrutiny-default-admin-token"
+# or rotate the token in InfluxDB first.
+scrutiny_influxdb_token: "CHANGE-ME-generate-with-openssl-rand-hex-32"
+scrutiny_influxdb_init_password: "CHANGE-ME"

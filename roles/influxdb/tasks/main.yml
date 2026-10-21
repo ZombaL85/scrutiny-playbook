@@ -1,0 +1,69 @@
+---
+- name: InfluxDB | Install deb822 repository prerequisites
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == 'Debian'
+
+- name: InfluxDB | Add InfluxData APT repository
+  ansible.builtin.deb822_repository:
+    name: influxdata
+    types: deb
+    uris: https://repos.influxdata.com/debian
+    suites: stable
+    components: main
+    signed_by: "{{ influxdb_repo_key_url }}"
+  register: influxdb_apt_repo
+  when: ansible_os_family == 'Debian'
+
+- name: InfluxDB | Refresh APT cache after adding repository
+  ansible.builtin.apt:
+    update_cache: true
+  when:
+    - ansible_os_family == 'Debian'
+    - influxdb_apt_repo is changed
+
+- name: InfluxDB | Add InfluxData YUM repository
+  ansible.builtin.yum_repository:
+    name: influxdata
+    description: InfluxData Repository - Stable
+    baseurl: https://repos.influxdata.com/stable/$basearch/main
+    gpgcheck: true
+    gpgkey: "{{ influxdb_repo_key_url }}"
+  when: ansible_os_family == 'RedHat'
+
+- name: InfluxDB | Install package
+  ansible.builtin.package:
+    name: "{{ influxdb_package }}"
+    state: "{{ influxdb_package_state }}"
+
+- name: InfluxDB | Set HTTP bind address
+  ansible.builtin.lineinfile:
+    path: "{{ influxdb_config_file }}"
+    regexp: '^\s*http-bind-address\s*='
+    line: 'http-bind-address = "{{ influxdb_http_bind_address }}"'
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart InfluxDB
+
+- name: InfluxDB | Enable and start service
+  ansible.builtin.systemd_service:
+    name: "{{ influxdb_service_name }}"
+    enabled: true
+    state: started
+
+- name: InfluxDB | Apply pending restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: InfluxDB | Wait until InfluxDB is healthy
+  ansible.builtin.uri:
+    url: "http://{{ influxdb_http_bind_address | regex_replace('^(0\\.0\\.0\\.0)?:', '127.0.0.1:') }}/health"
+    status_code: 200
+  register: influxdb_health
+  until: influxdb_health.status == 200
+  retries: 12
+  delay: 5

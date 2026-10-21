@@ -1,5 +1,0 @@
----
-# Name: Install dependencies for debian/ubuntu
-
-- name: Software - Install dependencies
-  apt: name=libc6 state=present

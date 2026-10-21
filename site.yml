@@ -1,32 +1,27 @@
 ---
 # file: site.yml
 
-- hosts: scrutiny_web
+- name: Scrutiny hub (InfluxDB + web UI/API)
+  hosts: scrutiny_web
   become: true
-
-  vars_files:
-    - vars/settings.yml
-
   roles:
-  #- buluma.influxdb2
-  - zorlin.influxdb2
-  - webapp
+    - role: influxdb
+      when: scrutiny_influxdb_install | bool
+      tags: [influxdb]
+    - role: webapp
+      tags: [webapp]
 
-- hosts: scrutiny_collector
+- name: Scrutiny collectors
+  hosts: scrutiny_collector
   become: true
-
-  vars_files:
-    - vars/settings.yml
-
   roles:
-    - role: geerlingguy.repo-epel
-      when: ansible_os_family == 'RedHat'
-    - geerlingguy.git
-    - zorlin.smartmontools
-    - collector
+    - role: collector
+      tags: [collector]
 
-  tasks:
-    - debug:
+  post_tasks:
+    - name: Success!
+      ansible.builtin.debug:
         msg:
           - "If you're reading this, Scrutiny has been successfully deployed."
-          - "Let us know if it worked, and feel free to reach out if you need help. Enjoy!"
+          - "Dashboard: {{ scrutiny_collector_api_endpoint }}"
+      when: inventory_hostname == ansible_play_hosts[0]

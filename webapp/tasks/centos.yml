@@ -1,5 +1,0 @@
----
-# Name: Install dependencies for CentOS
-
-- name: Software - Install dependencies
-  yum: name=glibc state=present

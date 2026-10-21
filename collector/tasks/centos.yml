@@ -1,7 +1,0 @@
----
-# Name: Install and configure the collector's dependencies
-
-- name: Software - Install dependencies (base)
-  yum:
-    name: crontabs
-    state: present

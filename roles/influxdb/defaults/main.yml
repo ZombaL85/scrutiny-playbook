@@ -1,0 +1,8 @@
+---
+influxdb_package: influxdb2
+influxdb_package_state: present
+influxdb_service_name: influxdb
+# Scrutiny runs on the same host, so InfluxDB does not need to listen publicly.
+influxdb_http_bind_address: "127.0.0.1:8086"
+influxdb_config_file: /etc/influxdb/config.toml
+influxdb_repo_key_url: https://repos.influxdata.com/influxdata-archive.key

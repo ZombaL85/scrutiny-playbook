@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Run the Scrutiny collector periodically
+
+[Timer]
+OnCalendar={{ scrutiny_collector_schedule }}
+Persistent=true
+RandomizedDelaySec={{ scrutiny_collector_randomized_delay }}
+
+[Install]
+WantedBy=timers.target

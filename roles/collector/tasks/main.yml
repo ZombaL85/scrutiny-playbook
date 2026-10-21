@@ -1,0 +1,83 @@
+---
+# I pick things up / I am a collector
+# And things, well things / They tend to accumulate
+
+- name: Preflight | Check architecture
+  ansible.builtin.assert:
+    that: ansible_architecture in scrutiny_arch_map
+    fail_msg: "Unsupported architecture: {{ ansible_architecture }}"
+    quiet: true
+
+- name: Preflight | Check that checksums exist for this version
+  ansible.builtin.assert:
+    that: scrutiny_version in scrutiny_checksums
+    fail_msg: "Add SHA256 digests for {{ scrutiny_version }} to scrutiny_checksums in group_vars/all/main.yml"
+    quiet: true
+
+- name: Set architecture-specific asset name
+  ansible.builtin.set_fact:
+    scrutiny_collector_asset: "scrutiny-collector-metrics-linux-{{ scrutiny_arch_map[ansible_architecture] }}"
+
+# smartctl 7+ is in the base repos of every currently supported distro
+- name: Software - Install smartmontools
+  ansible.builtin.package:
+    name: smartmontools
+    state: present
+
+- name: Binary - Install the collector binary
+  ansible.builtin.get_url:
+    url: "{{ scrutiny_download_base }}/{{ scrutiny_collector_asset }}"
+    dest: "{{ scrutiny_collector_bin }}"
+    checksum: "sha256:{{ scrutiny_checksums[scrutiny_version][scrutiny_collector_asset] }}"
+    owner: root
+    group: root
+    mode: "0755"
+    timeout: 60
+  register: scrutiny_collector_binary
+
+- name: Systemd - Create collector service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - scrutiny-collector.service
+    - scrutiny-collector.timer
+  notify: Reload systemd
+
+- name: Systemd - Apply unit changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Systemd - Enable and start the collector timer
+  ansible.builtin.systemd_service:
+    name: scrutiny-collector.timer
+    enabled: true
+    state: started
+
+# Clean-up after older versions of this playbook (cron-based)
+- name: Cleanup - Check whether crontab is available
+  ansible.builtin.stat:
+    path: /usr/bin/crontab
+  register: scrutiny_crontab_bin
+
+- name: Cleanup - Remove the legacy cron entry
+  ansible.builtin.cron:
+    name: "Scrutiny - Run the Collector"
+    user: root
+    state: absent
+  when: scrutiny_crontab_bin.stat.exists
+
+- name: Cleanup - Remove the legacy collector binary
+  ansible.builtin.file:
+    path: "{{ scrutiny_install_dir }}/bin/scrutiny-collector-metrics-linux"
+    state: absent
+
+- name: Run - Collect metrics once after install/upgrade
+  ansible.builtin.systemd_service:
+    name: scrutiny-collector.service
+    state: started
+  when:
+    - scrutiny_collector_run_after_install | bool
+    - scrutiny_collector_binary is changed

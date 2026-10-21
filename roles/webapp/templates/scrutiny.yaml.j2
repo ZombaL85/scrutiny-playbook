@@ -1,0 +1,38 @@
+# {{ ansible_managed }}
+# Full reference: https://github.com/AnalogJ/scrutiny/blob/master/example.scrutiny.yaml
+version: 1
+
+web:
+  listen:
+    port: {{ scrutiny_web_port }}
+    host: {{ scrutiny_web_listen_host }}
+    basepath: '{{ scrutiny_web_basepath }}'
+  database:
+    location: {{ scrutiny_install_dir }}/config/scrutiny.db
+  src:
+    frontend:
+      path: {{ scrutiny_install_dir }}/web
+  influxdb:
+    scheme: '{{ scrutiny_influxdb_scheme }}'
+    host: {{ scrutiny_influxdb_host }}
+    port: {{ scrutiny_influxdb_port }}
+    token: '{{ scrutiny_influxdb_token }}'
+    org: '{{ scrutiny_influxdb_org }}'
+    bucket: '{{ scrutiny_influxdb_bucket }}'
+    init_username: '{{ scrutiny_influxdb_init_username }}'
+    init_password: '{{ scrutiny_influxdb_init_password }}'
+    retention_policy: {{ scrutiny_influxdb_retention_policy | bool | lower }}
+    tls:
+      insecure_skip_verify: {{ scrutiny_influxdb_tls_insecure_skip_verify | bool | lower }}
+
+log:
+  file: '{{ scrutiny_log_file }}'
+  level: {{ scrutiny_log_level }}
+{% if scrutiny_notify_urls | length > 0 %}
+
+notify:
+  urls:
+{% for url in scrutiny_notify_urls %}
+    - '{{ url }}'
+{% endfor %}
+{% endif %}

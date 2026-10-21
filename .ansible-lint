@@ -1,0 +1,7 @@
+---
+# All roles share the scrutiny_* variable namespace (set in group_vars/all),
+# so role-name prefixes would only make the inventory harder to use.
+skip_list:
+  - var-naming[no-role-prefix]
+exclude_paths:
+  - group_vars/all/vault.yml

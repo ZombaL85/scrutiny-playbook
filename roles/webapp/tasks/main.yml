@@ -1,0 +1,166 @@
+---
+- name: Preflight | Check that secrets are defined
+  ansible.builtin.assert:
+    that:
+      - scrutiny_influxdb_token is defined
+      - scrutiny_influxdb_token | length > 0
+      - scrutiny_influxdb_init_password is defined
+      - scrutiny_influxdb_init_password | length >= 8
+    fail_msg: >-
+      Define scrutiny_influxdb_token and scrutiny_influxdb_init_password (min. 8 chars)
+      in group_vars/all/vault.yml - see group_vars/all/vault.yml.example.
+    quiet: true
+  no_log: true
+
+- name: Preflight | Check architecture
+  ansible.builtin.assert:
+    that: ansible_architecture in scrutiny_arch_map
+    fail_msg: "Unsupported architecture: {{ ansible_architecture }}"
+    quiet: true
+
+- name: Preflight | Check that checksums exist for this version
+  ansible.builtin.assert:
+    that: scrutiny_version in scrutiny_checksums
+    fail_msg: "Add SHA256 digests for {{ scrutiny_version }} to scrutiny_checksums in group_vars/all/main.yml"
+    quiet: true
+
+- name: Set architecture-specific asset name
+  ansible.builtin.set_fact:
+    scrutiny_web_asset: "scrutiny-web-linux-{{ scrutiny_arch_map[ansible_architecture] }}"
+
+# User
+- name: User | Create Scrutiny system group
+  ansible.builtin.group:
+    name: "{{ scrutiny_group }}"
+    system: true
+
+- name: User | Create Scrutiny system user
+  ansible.builtin.user:
+    name: "{{ scrutiny_user }}"
+    group: "{{ scrutiny_group }}"
+    home: "{{ scrutiny_install_dir }}"
+    create_home: false
+    shell: /usr/sbin/nologin
+    system: true
+
+# Directory structure
+- name: Files - Create the base directory
+  ansible.builtin.file:
+    path: "{{ scrutiny_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Files - Create the config/data directory
+  ansible.builtin.file:
+    path: "{{ scrutiny_install_dir }}/config"
+    state: directory
+    owner: "{{ scrutiny_user }}"
+    group: "{{ scrutiny_group }}"
+    mode: "0750"
+
+- name: Files - Create the download cache directory
+  ansible.builtin.file:
+    path: "{{ scrutiny_install_dir }}/dist"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Binary (installed to /usr/local/bin so it gets bin_t on SELinux hosts)
+- name: Binary - Install the webapp binary
+  ansible.builtin.get_url:
+    url: "{{ scrutiny_download_base }}/{{ scrutiny_web_asset }}"
+    dest: "{{ scrutiny_web_bin }}"
+    checksum: "sha256:{{ scrutiny_checksums[scrutiny_version][scrutiny_web_asset] }}"
+    owner: root
+    group: root
+    mode: "0755"
+    timeout: 60
+  notify: Restart scrutiny-web
+
+# Frontend
+- name: Frontend - Download the frontend archive
+  ansible.builtin.get_url:
+    url: "{{ scrutiny_download_base }}/scrutiny-web-frontend.tar.gz"
+    dest: "{{ scrutiny_install_dir }}/dist/scrutiny-web-frontend-{{ scrutiny_version }}.tar.gz"
+    checksum: "sha256:{{ scrutiny_checksums[scrutiny_version]['scrutiny-web-frontend.tar.gz'] }}"
+    owner: root
+    group: root
+    mode: "0644"
+    timeout: 60
+  register: scrutiny_frontend_archive
+
+- name: Frontend - Remove the previous frontend version
+  ansible.builtin.file:
+    path: "{{ scrutiny_install_dir }}/web"
+    state: absent
+  when: scrutiny_frontend_archive is changed  # noqa: no-handler - must run before extraction
+
+- name: Frontend - Create the frontend directory
+  ansible.builtin.file:
+    path: "{{ scrutiny_install_dir }}/web"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Frontend - Extract the frontend files
+  ansible.builtin.unarchive:
+    src: "{{ scrutiny_frontend_archive.dest }}"
+    dest: "{{ scrutiny_install_dir }}/web"
+    remote_src: true
+    extra_opts: ["--strip-components=1"]
+    creates: "{{ scrutiny_install_dir }}/web/index.html"
+    owner: root
+    group: root
+  notify: Restart scrutiny-web
+
+# Configuration
+- name: Configuration - Configure Scrutiny
+  ansible.builtin.template:
+    src: scrutiny.yaml.j2
+    dest: "{{ scrutiny_install_dir }}/config/scrutiny.yaml"
+    owner: root
+    group: "{{ scrutiny_group }}"
+    mode: "0640"
+  notify: Restart scrutiny-web
+
+# Service
+- name: Systemd - Create scrutiny-web service
+  ansible.builtin.template:
+    src: scrutiny-web.service.j2
+    dest: /etc/systemd/system/scrutiny-web.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart scrutiny-web
+
+- name: Systemd - Enable and start scrutiny-web
+  ansible.builtin.systemd_service:
+    name: scrutiny-web
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# Clean-up after older versions of this playbook
+- name: Cleanup - Remove legacy files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ scrutiny_install_dir }}/bin/scrutiny-web-linux"
+    - /var/log/scrutiny.log
+
+- name: Apply pending restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify - Wait until the Scrutiny API is healthy
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ scrutiny_web_port }}{{ scrutiny_web_basepath }}/api/health"
+    status_code: 200
+  register: scrutiny_health
+  until: scrutiny_health.status == 200
+  retries: 12
+  delay: 5
