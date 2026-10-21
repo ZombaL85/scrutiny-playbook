@@ -75,10 +75,13 @@ jobs:
           echo "systemd state: ${state:-unknown}"
 
       - name: Run playbook
-        run: ansible-playbook -i tests/inventory site.yml -e @tests/ci-vars.yml
+        run: |
+          set -o pipefail
+          ansible-playbook -i tests/inventory site.yml -e @tests/ci-vars.yml | tee /tmp/first-run.log
 
       - name: Idempotence check
         run: |
+          set -o pipefail
           ansible-playbook -i tests/inventory site.yml -e @tests/ci-vars.yml | tee /tmp/second-run.log
           grep -qE 'changed=0 +unreachable=0 +failed=0' /tmp/second-run.log \
             || { echo "::error::Second run reported changes - playbook is not idempotent"; exit 1; }
@@ -88,6 +91,14 @@ jobs:
           ansible -i tests/inventory test -m ansible.builtin.uri -a "url=http://127.0.0.1:8080/api/health"
           docker exec test systemctl is-enabled scrutiny-collector.timer
 
+      - name: Report Ansible errors as annotations
+        if: failure()
+        run: >
+          python3 tests/annotate_errors.py "${{ matrix.distro }}"
+          /tmp/first-run.log /tmp/second-run.log
+
       - name: Service logs
         if: failure()
-        run: docker exec test journalctl -u influxdb -u scrutiny-web --no-pager -n 100 || true
+        run: |
+          docker exec test journalctl -u influxdb -u scrutiny-web --no-pager -n 100 || true
+          docker exec test sh -c 'cat /etc/os-release; rpm -q rpm gnupg2 curl 2>/dev/null || dpkg -l rpm gnupg curl 2>/dev/null | tail -3' || true
