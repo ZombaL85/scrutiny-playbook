@@ -1,2 +1,8 @@
-# never commit an unencrypted vault
 *.retry
+# Vault password files - never commit
+.vault-pass*
+*.vault-pass
+# Secrets. This fork is public, so the vault stays out of git even when
+# encrypted. In a private repo you may remove this line and commit the
+# encrypted file (the pre-commit hook in .githooks blocks unencrypted ones).
+group_vars/all/vault.yml

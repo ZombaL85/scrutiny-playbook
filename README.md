@@ -55,13 +55,24 @@ pinky.windowpa.in
 inky.windowpa.in
 ```
 
-* Create and encrypt the secrets file (InfluxDB token and initial admin password):
+* Create and encrypt the secrets file (InfluxDB token, Healthchecks ping key):
 
 ```
 cp group_vars/all/vault.yml.example group_vars/all/vault.yml
 $EDITOR group_vars/all/vault.yml        # e.g. token from: openssl rand -hex 32
 ansible-vault encrypt group_vars/all/vault.yml
 ```
+
+  Later edits: `ansible-vault edit group_vars/all/vault.yml`. To avoid typing the password on every run,
+  keep it in a file outside the repo and point Ansible at it:
+
+```
+mkdir -p ~/.ansible && install -m 600 /dev/null ~/.ansible/scrutiny.vault-pass && $EDITOR ~/.ansible/scrutiny.vault-pass
+export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible/scrutiny.vault-pass
+```
+
+  `group_vars/all/vault.yml` is git-ignored because this repository is public. Enable the pre-commit hook
+  that blocks unencrypted vault files with `git config core.hooksPath .githooks`.
 
 * Optionally preview the changes, then run the playbook:
 
@@ -70,7 +81,7 @@ ansible-playbook site.yml --ask-vault-pass --check --diff
 ansible-playbook site.yml --ask-vault-pass
 ```
 
-  Add `--ask-become-pass` if your user needs a sudo password.
+  Drop `--ask-vault-pass` when `ANSIBLE_VAULT_PASSWORD_FILE` is set. Add `--ask-become-pass` if your user needs a sudo password.
 
 * Visit `http://<hub>:8080`. Collectors must be able to reach the hub on TCP 8080 - open that port in your firewall if needed.
 

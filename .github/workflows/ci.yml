@@ -22,6 +22,14 @@ jobs:
           python-version: "3.12"
       - name: Install linters
         run: pip install "ansible-core==2.21.5" "ansible-lint==26.10.1"
+      - name: Check that committed vault files are encrypted
+        run: |
+          status=0
+          for f in $(git ls-files '*vault.yml' '*vault.yaml' '*/vault/*'); do
+            head -n1 "$f" | grep -q '^\$ANSIBLE_VAULT;' \
+              || { echo "::error file=$f::$f is not encrypted with ansible-vault"; status=1; }
+          done
+          exit $status
       - name: ansible-lint
         run: ansible-lint
       - name: Syntax check
@@ -67,6 +75,9 @@ jobs:
             sleep 2
           done
           echo "systemd state: ${state:-unknown}"
+
+      - name: Drop the vault (CI has no vault password; tests/ci-vars.yml covers it)
+        run: rm -f group_vars/all/vault.yml
 
       - name: Run playbook
         run: |

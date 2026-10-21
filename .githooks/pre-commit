@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Refuse to commit Ansible vault files that are not encrypted.
+# Enable once per clone:  git config core.hooksPath .githooks
+set -eu  # no pipefail: `head` closing the pipe early is expected
+
+status=0
+while IFS= read -r -d '' file; do
+  case "$file" in
+    *vault.yml | *vault.yaml | */vault/*) ;;
+    *) continue ;;
+  esac
+  [[ "$file" == *.example ]] && continue
+  # shellcheck disable=SC2016 # literal $ANSIBLE_VAULT header
+  if ! git show ":$file" | head -n1 | grep -q '^\$ANSIBLE_VAULT;'; then
+    echo "pre-commit: $file is not encrypted - run: ansible-vault encrypt $file" >&2
+    status=1
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+exit "$status"
