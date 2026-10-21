@@ -72,7 +72,7 @@ Common variables (see `group_vars/all/main.yml` and `roles/*/defaults/main.yml` 
 |---|---|---|
 | `scrutiny_version` | `v0.9.5` | Scrutiny release to install |
 | `scrutiny_web_port` | `8080` | Web UI/API port |
-| `scrutiny_influxdb_install` | `true` | Install InfluxDB on the hub; set `false` to use an existing one (`scrutiny_influxdb_host`, `_port`, `_token`, ...) |
+| `scrutiny_influxdb_install` | `false` | `true` = install InfluxDB on the hub; `false` = use an existing InfluxDB 2.x (`scrutiny_influxdb_host`, `_port`, `_org`, `_bucket` + token in the vault) |
 | `scrutiny_collector_schedule` | `*-*-* 01:00:00` | systemd `OnCalendar` for the collector |
 | `scrutiny_collector_host_id` | inventory hostname | Label used to group drives per host in the dashboard |
 | `scrutiny_notify_urls` | `[]` | [Shoutrrr](https://shoutrrr.nickfedor.com/services/overview/) notification URLs |

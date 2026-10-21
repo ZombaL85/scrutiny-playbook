@@ -19,8 +19,11 @@ web:
     token: '{{ scrutiny_influxdb_token }}'
     org: '{{ scrutiny_influxdb_org }}'
     bucket: '{{ scrutiny_influxdb_bucket }}'
+{% if scrutiny_influxdb_install | bool %}
+    # Used only for first-time onboarding of a fresh InfluxDB
     init_username: '{{ scrutiny_influxdb_init_username }}'
     init_password: '{{ scrutiny_influxdb_init_password }}'
+{% endif %}
     retention_policy: {{ scrutiny_influxdb_retention_policy | bool | lower }}
     tls:
       insecure_skip_verify: {{ scrutiny_influxdb_tls_insecure_skip_verify | bool | lower }}

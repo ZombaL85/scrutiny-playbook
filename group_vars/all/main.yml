@@ -28,11 +28,18 @@ scrutiny_arch_map:
 scrutiny_install_dir: /opt/scrutiny
 scrutiny_web_port: 8080
 
-# Install InfluxDB 2.x on the web (hub) host. Set to false if you point
-# Scrutiny at an existing InfluxDB (see scrutiny_influxdb_* in roles/webapp).
-scrutiny_influxdb_install: true
+# Install InfluxDB 2.x on the web (hub) host. Set to false to use an
+# existing InfluxDB 2.x and point Scrutiny at it below. The token must be
+# able to read/write the bucket, create the <bucket>_weekly/_monthly/_yearly
+# buckets and manage tasks in the organization.
+scrutiny_influxdb_install: false
+scrutiny_influxdb_scheme: http
+scrutiny_influxdb_host: 192.168.1.50
+scrutiny_influxdb_port: 8086
+scrutiny_influxdb_org: scrutiny      # <- set to your InfluxDB organization
+scrutiny_influxdb_bucket: scrutiny
 
 # Secrets - define these in group_vars/all/vault.yml (ansible-vault encrypted),
 # see group_vars/all/vault.yml.example:
 #   scrutiny_influxdb_token
-#   scrutiny_influxdb_init_password
+#   scrutiny_influxdb_init_password   (only when scrutiny_influxdb_install: true)

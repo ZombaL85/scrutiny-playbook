@@ -1,16 +1,37 @@
 ---
-- name: Preflight | Check that secrets are defined
+- name: Preflight | Check that the InfluxDB token is defined
   ansible.builtin.assert:
     that:
       - scrutiny_influxdb_token is defined
       - scrutiny_influxdb_token | length > 0
+    fail_msg: >-
+      Define scrutiny_influxdb_token in group_vars/all/vault.yml
+      - see group_vars/all/vault.yml.example.
+    quiet: true
+  no_log: true
+
+- name: Preflight | Check that the InfluxDB onboarding password is defined
+  ansible.builtin.assert:
+    that:
       - scrutiny_influxdb_init_password is defined
       - scrutiny_influxdb_init_password | length >= 8
     fail_msg: >-
-      Define scrutiny_influxdb_token and scrutiny_influxdb_init_password (min. 8 chars)
-      in group_vars/all/vault.yml - see group_vars/all/vault.yml.example.
+      Define scrutiny_influxdb_init_password (min. 8 chars) in group_vars/all/vault.yml.
+      It is only needed when this playbook installs InfluxDB.
     quiet: true
   no_log: true
+  when: scrutiny_influxdb_install | bool
+
+- name: Preflight | Check access to the external InfluxDB (token + organization)
+  ansible.builtin.uri:
+    url: "{{ scrutiny_influxdb_scheme }}://{{ scrutiny_influxdb_host }}:{{ scrutiny_influxdb_port }}/api/v2/orgs?org={{ scrutiny_influxdb_org | urlencode }}"
+    headers:
+      Authorization: "Token {{ scrutiny_influxdb_token }}"
+    validate_certs: "{{ not (scrutiny_influxdb_tls_insecure_skip_verify | bool) }}"
+    status_code: 200
+    timeout: 10
+  no_log: true
+  when: not (scrutiny_influxdb_install | bool)
 
 - name: Preflight | Check architecture
   ansible.builtin.assert:
@@ -164,3 +185,19 @@
   until: scrutiny_health.status == 200
   retries: 12
   delay: 5
+
+# The health check above passes for ANY process on the port (e.g. an old
+# manually installed Scrutiny or a Docker container), so make sure it's ours.
+- name: Verify - Check that scrutiny-web owns the listening port
+  ansible.builtin.command:
+    cmd: "ss -Htlnp sport = :{{ scrutiny_web_port }}"
+  register: scrutiny_port_owner
+  changed_when: false
+  failed_when: "'\"scrutiny-web\"' not in scrutiny_port_owner.stdout"
+
+- name: Verify - Check the installed webapp version
+  ansible.builtin.command:
+    cmd: "{{ scrutiny_web_bin }} --version"
+  register: scrutiny_web_version
+  changed_when: false
+  failed_when: scrutiny_version | regex_replace('^v', '') not in scrutiny_web_version.stdout
