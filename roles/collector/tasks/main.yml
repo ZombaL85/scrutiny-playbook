@@ -62,12 +62,24 @@
     path: /usr/bin/crontab
   register: scrutiny_crontab_bin
 
+# Read the crontab first: the cron module fails on an empty crontab with
+# implementations that exit 2 instead of 1 (e.g. systemd-cron 2.x on Ubuntu 24.04).
+- name: Cleanup - Read root's crontab
+  ansible.builtin.command:
+    cmd: crontab -l -u root
+  register: scrutiny_root_crontab
+  changed_when: false
+  failed_when: false
+  when: scrutiny_crontab_bin.stat.exists
+
 - name: Cleanup - Remove the legacy cron entry
   ansible.builtin.cron:
     name: "Scrutiny - Run the Collector"
     user: root
     state: absent
-  when: scrutiny_crontab_bin.stat.exists
+  when:
+    - scrutiny_crontab_bin.stat.exists
+    - "'#Ansible: Scrutiny - Run the Collector' in scrutiny_root_crontab.stdout"
 
 - name: Cleanup - Remove the legacy collector binary
   ansible.builtin.file:

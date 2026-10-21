@@ -1,5 +1,7 @@
+# CI: the playbook runs on the GitHub runner and connects into the
+# "test" container through the community.docker.docker connection.
 [scrutiny_web]
-localhost ansible_connection=local
+test ansible_connection=community.docker.docker
 
 [scrutiny_collector]
-localhost ansible_connection=local
+test ansible_connection=community.docker.docker
