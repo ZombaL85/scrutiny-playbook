@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Ping Healthchecks for scrutiny-collector.service.
+# Called by systemd: "start" from ExecStartPre, "finish" from ExecStopPost.
+# Reads HC_PING_URL (and optionally HC_PING_QUERY) from the unit's EnvironmentFile.
+# Never fails the unit - monitoring must not break the collector.
+set -uo pipefail
+
+url="${HC_PING_URL:-}"
+query="${HC_PING_QUERY:-}"
+[[ -n "$url" ]] || exit 0
+
+ping() {
+  curl --fail --silent --show-error --max-time 10 --retry 3 --output /dev/null "$@" || true
+}
+
+case "${1:-}" in
+  start)
+    ping "${url}/start${query}"
+    ;;
+  finish)
+    # EXIT_STATUS is set by systemd for ExecStopPost: a number, or a signal name
+    # (e.g. TERM) when the collector was killed - report that as a failure.
+    status="${EXIT_STATUS:-1}"
+    [[ "$status" =~ ^[0-9]+$ ]] || status=1
+    # Attach this run's log (last 10 kB) so the reason is visible in Healthchecks.
+    journalctl --no-pager --output=cat "_SYSTEMD_INVOCATION_ID=${INVOCATION_ID:-none}" 2>/dev/null \
+      | tail -c 10000 \
+      | ping --data-binary @- "${url}/${status}${query}"
+    ;;
+  *)
+    echo "usage: $0 start|finish" >&2
+    exit 0
+    ;;
+esac

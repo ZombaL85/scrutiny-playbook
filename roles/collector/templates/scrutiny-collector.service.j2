@@ -6,8 +6,16 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+{% if scrutiny_healthchecks_enabled | bool %}
+EnvironmentFile=/etc/scrutiny/healthcheck.env
+ExecStartPre=-/usr/local/libexec/scrutiny-healthcheck-ping start
+{% endif %}
 # Runs as root: smartctl needs raw access to SATA/NVMe devices.
 ExecStart={{ scrutiny_collector_bin }} run --api-endpoint "{{ scrutiny_collector_api_endpoint }}"{% if scrutiny_collector_host_id | length > 0 %} --host-id "{{ scrutiny_collector_host_id }}"{% endif %}
+
+{% if scrutiny_healthchecks_enabled | bool %}
+ExecStopPost=-/usr/local/libexec/scrutiny-healthcheck-ping finish
+{% endif %}
 
 ProtectHome=yes
 PrivateTmp=yes

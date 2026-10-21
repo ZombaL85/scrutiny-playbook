@@ -11,3 +11,7 @@
 scrutiny_influxdb_token: "CHANGE-ME-generate-with-openssl-rand-hex-32"
 # Only needed when scrutiny_influxdb_install: true
 # scrutiny_influxdb_init_password: "CHANGE-ME"
+
+# Healthchecks project ping key (Project Settings -> Ping key),
+# only needed when scrutiny_healthchecks_enabled: true
+scrutiny_healthchecks_ping_key: "CHANGE-ME"

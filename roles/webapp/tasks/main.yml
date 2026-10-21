@@ -35,8 +35,8 @@
 
 - name: Preflight | Check architecture
   ansible.builtin.assert:
-    that: ansible_architecture in scrutiny_arch_map
-    fail_msg: "Unsupported architecture: {{ ansible_architecture }}"
+    that: ansible_facts['architecture'] in scrutiny_arch_map
+    fail_msg: "Unsupported architecture: {{ ansible_facts['architecture'] }}"
     quiet: true
 
 - name: Preflight | Check that checksums exist for this version
@@ -47,11 +47,11 @@
 
 - name: Set architecture-specific asset name
   ansible.builtin.set_fact:
-    scrutiny_web_asset: "scrutiny-web-linux-{{ scrutiny_arch_map[ansible_architecture] }}"
+    scrutiny_web_asset: "scrutiny-web-linux-{{ scrutiny_arch_map[ansible_facts['architecture']] }}"
 
 - name: Software - Install iproute (provides ss, used for verification)
   ansible.builtin.package:
-    name: "{{ 'iproute2' if ansible_os_family == 'Debian' else 'iproute' }}"
+    name: "{{ 'iproute2' if ansible_facts['os_family'] == 'Debian' else 'iproute' }}"
     state: present
 
 # User

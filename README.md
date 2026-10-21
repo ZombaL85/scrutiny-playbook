@@ -87,6 +87,25 @@ Common variables (see `group_vars/all/main.yml` and `roles/*/defaults/main.yml` 
 | `scrutiny_collector_host_id` | inventory hostname | Label used to group drives per host in the dashboard |
 | `scrutiny_notify_urls` | `[]` | [Shoutrrr](https://shoutrrr.nickfedor.com/services/overview/) notification URLs |
 
+### Healthchecks monitoring
+
+Collector runs can report to [Healthchecks](https://healthchecks.io) (hosted or self-hosted). Every run pings
+`<base_url>/<ping_key>/<slug>/start`, then `/<exit status>` with the run's log as the body, so a failed run
+shows the error and a missed run raises an alert.
+
+```yaml
+# group_vars/all/main.yml
+scrutiny_healthchecks_enabled: true
+scrutiny_healthchecks_base_url: "http://healthchecks.example.lan:8000/ping"
+# group_vars/all/vault.yml
+scrutiny_healthchecks_ping_key: "<project ping key>"
+```
+
+The slug defaults to `scrutiny_<hostname>` (override per host with `scrutiny_healthchecks_slug` in `host_vars`).
+Missing checks are created on the first ping (`scrutiny_healthchecks_auto_create`). Set each check's schedule to
+match `scrutiny_collector_schedule` - for the default daily run at 01:00 use cron `0 1 * * *` with a grace time
+above the 15 minute randomized delay, e.g. 30 minutes.
+
 ### Upgrading Scrutiny
 
 Set `scrutiny_version` and add the SHA256 digests of the new release assets to `scrutiny_checksums` (they are listed next to each asset on the GitHub release page), then re-run the playbook. Changed binaries are re-downloaded and the services restarted.

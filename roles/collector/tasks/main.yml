@@ -4,8 +4,8 @@
 
 - name: Preflight | Check architecture
   ansible.builtin.assert:
-    that: ansible_architecture in scrutiny_arch_map
-    fail_msg: "Unsupported architecture: {{ ansible_architecture }}"
+    that: ansible_facts['architecture'] in scrutiny_arch_map
+    fail_msg: "Unsupported architecture: {{ ansible_facts['architecture'] }}"
     quiet: true
 
 - name: Preflight | Check that checksums exist for this version
@@ -16,13 +16,26 @@
 
 - name: Set architecture-specific asset name
   ansible.builtin.set_fact:
-    scrutiny_collector_asset: "scrutiny-collector-metrics-linux-{{ scrutiny_arch_map[ansible_architecture] }}"
+    scrutiny_collector_asset: "scrutiny-collector-metrics-linux-{{ scrutiny_arch_map[ansible_facts['architecture']] }}"
 
 # smartctl 7+ is in the base repos of every currently supported distro
 - name: Software - Install smartmontools
   ansible.builtin.package:
     name: smartmontools
     state: present
+
+- name: Preflight | Check Healthchecks settings
+  ansible.builtin.assert:
+    that:
+      - scrutiny_healthchecks_ping_key is defined
+      - scrutiny_healthchecks_ping_key | length > 0
+      - scrutiny_healthchecks_slug is match('^[a-z0-9_-]+$')
+    fail_msg: >-
+      With scrutiny_healthchecks_enabled define scrutiny_healthchecks_ping_key
+      (in the vault) and a slug made of lowercase letters, digits, "-" and "_".
+    quiet: true
+  no_log: true
+  when: scrutiny_healthchecks_enabled | bool
 
 - name: Binary - Install the collector binary
   ansible.builtin.get_url:
@@ -34,6 +47,50 @@
     mode: "0755"
     timeout: 60
   register: scrutiny_collector_binary
+
+# Healthchecks
+- name: Healthchecks - Install curl
+  ansible.builtin.package:
+    name: curl
+    state: present
+  when: scrutiny_healthchecks_enabled | bool
+
+- name: Healthchecks - Create the configuration directory
+  ansible.builtin.file:
+    path: /etc/scrutiny
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  when: scrutiny_healthchecks_enabled | bool
+
+- name: Healthchecks - Install the ping URL (contains the ping key)
+  ansible.builtin.template:
+    src: scrutiny-healthcheck.env.j2
+    dest: /etc/scrutiny/healthcheck.env
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: scrutiny_healthchecks_enabled | bool
+
+- name: Healthchecks - Install the ping helper
+  ansible.builtin.copy:
+    src: scrutiny-healthcheck-ping
+    dest: /usr/local/libexec/scrutiny-healthcheck-ping
+    owner: root
+    group: root
+    mode: "0755"
+  when: scrutiny_healthchecks_enabled | bool
+
+- name: Healthchecks - Remove files when disabled
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/scrutiny/healthcheck.env
+    - /usr/local/libexec/scrutiny-healthcheck-ping
+  when: not (scrutiny_healthchecks_enabled | bool)
 
 - name: Systemd - Create collector service and timer
   ansible.builtin.template:

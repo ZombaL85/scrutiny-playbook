@@ -18,7 +18,7 @@ scrutiny_checksums:
 
 scrutiny_download_base: "https://github.com/AnalogJ/scrutiny/releases/download/{{ scrutiny_version }}"
 
-# ansible_architecture -> Scrutiny release asset suffix
+# ansible_facts['architecture'] -> Scrutiny release asset suffix
 scrutiny_arch_map:
   x86_64: amd64
   aarch64: arm64
@@ -57,3 +57,8 @@ scrutiny_tested_platforms:
   OracleLinux: ["10"]
   CentOS: ["10"]  # CentOS Stream
 scrutiny_allow_untested_platforms: true
+
+# Healthchecks monitoring of collector runs (see roles/collector/defaults).
+# Ping key: scrutiny_healthchecks_ping_key in group_vars/all/vault.yml.
+scrutiny_healthchecks_enabled: true
+scrutiny_healthchecks_base_url: "http://192.168.1.50:8001/ping"

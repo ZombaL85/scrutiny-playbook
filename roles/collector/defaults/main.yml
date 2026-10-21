@@ -16,3 +16,15 @@ scrutiny_collector_randomized_delay: 15min
 # Run the collector once right after it is installed/upgraded,
 # so the dashboard is populated without waiting for the timer.
 scrutiny_collector_run_after_install: true
+
+# Healthchecks (https://healthchecks.io, also self-hosted) monitoring of
+# collector runs. Each run pings <base_url>/<ping_key>/<slug>/start and then
+# /<exit status>, with the run's log as the body, so a failed or missing run
+# raises an alert. Keep the ping key in the vault.
+scrutiny_healthchecks_enabled: false
+scrutiny_healthchecks_base_url: "https://hc-ping.com"
+# scrutiny_healthchecks_ping_key: "<project ping key>"   # vault
+# Slug: lowercase letters, digits, "-" and "_" only.
+scrutiny_healthchecks_slug: "scrutiny_{{ ansible_facts['hostname'] | lower | regex_replace('[^a-z0-9_-]', '-') }}"
+# Create the check automatically on the first ping if it does not exist.
+scrutiny_healthchecks_auto_create: true

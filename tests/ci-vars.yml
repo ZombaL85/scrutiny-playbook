@@ -12,3 +12,5 @@ scrutiny_allow_untested_platforms: false
 # Containers have no real disks to scan.
 scrutiny_collector_run_after_install: false
 scrutiny_collector_api_endpoint: "http://127.0.0.1:8080"
+# No Healthchecks server in CI.
+scrutiny_healthchecks_enabled: false

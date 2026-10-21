@@ -1,28 +1,28 @@
 ---
 - name: Preflight | Check OS family
   ansible.builtin.assert:
-    that: ansible_os_family in ['Debian', 'RedHat']
+    that: ansible_facts['os_family'] in ['Debian', 'RedHat']
     fail_msg: >-
-      {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_os_family }} family)
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }} ({{ ansible_facts['os_family'] }} family)
       is not supported - only Debian- and Red Hat-family systems are.
     quiet: true
 
 - name: Preflight | Check service manager
   ansible.builtin.assert:
-    that: ansible_service_mgr == 'systemd'
-    fail_msg: "systemd is required (found: {{ ansible_service_mgr }})."
+    that: ansible_facts['service_mgr'] == 'systemd'
+    fail_msg: "systemd is required (found: {{ ansible_facts['service_mgr'] }})."
     quiet: true
 
 - name: Preflight | Determine whether this platform is tested
   ansible.builtin.set_fact:
     scrutiny_platform_tested: >-
-      {{ ansible_distribution_major_version in scrutiny_tested_platforms.get(ansible_distribution, [])
-         or ansible_distribution_version in scrutiny_tested_platforms.get(ansible_distribution, []) }}
+      {{ ansible_facts['distribution_major_version'] in scrutiny_tested_platforms.get(ansible_facts['distribution'], [])
+         or ansible_facts['distribution_version'] in scrutiny_tested_platforms.get(ansible_facts['distribution'], []) }}
 
 - name: Preflight | Warn about an untested platform
   ansible.builtin.debug:
     msg: >-
-      {{ ansible_distribution }} {{ ansible_distribution_version }} is not in scrutiny_tested_platforms.
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }} is not in scrutiny_tested_platforms.
       Continuing because scrutiny_allow_untested_platforms is true.
   when:
     - not scrutiny_platform_tested | bool
@@ -31,7 +31,7 @@
 - name: Preflight | Stop on an untested platform
   ansible.builtin.fail:
     msg: >-
-      {{ ansible_distribution }} {{ ansible_distribution_version }} is not in scrutiny_tested_platforms.
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }} is not in scrutiny_tested_platforms.
       Set scrutiny_allow_untested_platforms: true to try anyway.
   when:
     - not scrutiny_platform_tested | bool
