@@ -43,3 +43,17 @@ scrutiny_influxdb_bucket: scrutiny
 # see group_vars/all/vault.yml.example:
 #   scrutiny_influxdb_token
 #   scrutiny_influxdb_init_password   (only when scrutiny_influxdb_install: true)
+
+# Platforms covered by CI (.github/workflows/ci.yml). Values are major
+# versions, or full versions where the major alone is ambiguous (Ubuntu LTS).
+# Other Debian/Red Hat-family systems get a warning, or fail if
+# scrutiny_allow_untested_platforms is false.
+scrutiny_tested_platforms:
+  Debian: ["12", "13"]
+  Ubuntu: ["22.04", "24.04", "26.04"]
+  RedHat: ["8", "9", "10"]
+  Rocky: ["8", "9", "10"]
+  AlmaLinux: ["8", "9", "10"]
+  OracleLinux: ["8", "9", "10"]
+  CentOS: ["9", "10"]  # CentOS Stream
+scrutiny_allow_untested_platforms: true

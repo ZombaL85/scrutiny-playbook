@@ -1,5 +1,7 @@
 # scrutiny-playbook
 
+[![CI](https://github.com/ZombaL85/scrutiny-playbook/actions/workflows/ci.yml/badge.svg)](https://github.com/ZombaL85/scrutiny-playbook/actions/workflows/ci.yml)
+
 This is an Ansible-based installer for [Scrutiny](https://github.com/AnalogJ/scrutiny), allowing you to monitor SMART data for a fleet of machines, large or small, and have some idea of when drives are experiencing issues.
 
 It supports both all-in-one and hub-and-spoke deployments, and most popular architectures (amd64, arm64, armv7, armv6).
@@ -18,18 +20,30 @@ All release downloads are verified against pinned SHA256 digests.
 * One or many machines to monitor.
 * systemd on all managed hosts.
 
-Supported operating systems (both roles):
+Supported operating systems (both roles). CI tests every push on Debian, Ubuntu and Rocky Linux images
+(the other EL distributions are covered as binary-compatible with Rocky):
 
-* Debian 11 or above
-* Ubuntu 22.04 or above
-* RHEL / Rocky Linux / AlmaLinux 8 or above
+| Distribution | Versions |
+|---|---|
+| Debian (incl. Raspberry Pi OS, Proxmox VE) | 12 (bookworm), 13 (trixie) |
+| Ubuntu LTS | 22.04, 24.04, 26.04 |
+| RHEL / Rocky Linux / AlmaLinux / Oracle Linux | 8, 9, 10 |
+| CentOS Stream | 9, 10 |
+
+Other Debian- or Red Hat-family systems (e.g. Debian 11, non-LTS Ubuntu, Fedora) only trigger a warning;
+set `scrutiny_allow_untested_platforms: false` to make them fail instead. The list lives in
+`scrutiny_tested_platforms` in `group_vars/all/main.yml`.
+
+> **EL8 targets:** ansible-core 2.17+ no longer supports Python 3.6, which is the system Python
+> (and the only one with `dnf` bindings) on RHEL/Rocky/Alma 8. Use ansible-core 2.16 on the
+> control machine if you manage EL8 hosts.
 
 ## Getting Started
 
 * Check out a copy of this repository.
 
 ```
-git clone https://github.com/Zorlin/scrutiny-playbook.git
+git clone https://github.com/ZombaL85/scrutiny-playbook.git
 cd scrutiny-playbook
 ```
 

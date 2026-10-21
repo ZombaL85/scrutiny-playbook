@@ -1,0 +1,5 @@
+[scrutiny_web]
+localhost ansible_connection=local
+
+[scrutiny_collector]
+localhost ansible_connection=local

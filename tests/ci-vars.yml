@@ -1,0 +1,13 @@
+---
+# CI only: fresh all-in-one install inside a systemd container.
+# Passed with -e, so it overrides group_vars/all/main.yml.
+scrutiny_influxdb_install: true
+scrutiny_influxdb_host: localhost
+scrutiny_influxdb_port: 8086
+scrutiny_influxdb_org: scrutiny
+scrutiny_influxdb_bucket: metrics
+scrutiny_influxdb_token: ci-test-token-not-a-secret
+scrutiny_influxdb_init_password: ci-test-password
+scrutiny_allow_untested_platforms: false
+# Containers have no real disks to scan.
+scrutiny_collector_run_after_install: false

@@ -1,0 +1,84 @@
+---
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # weekly, to notice when a distro or upstream repo changes under us
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install linters
+        run: pip install "ansible-core==2.21.5" "ansible-lint==26.10.1"
+      - name: ansible-lint
+        run: ansible-lint
+      - name: Syntax check
+        run: ansible-playbook --syntax-check -i tests/inventory site.yml
+
+  test:
+    needs: lint
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - debian12
+          - debian13
+          - ubuntu2204
+          - ubuntu2404
+          - ubuntu2604
+          - rockylinux8
+          - rockylinux9
+          - rockylinux10
+    env:
+      ANSIBLE_FORCE_COLOR: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Start systemd container
+        run: |
+          docker run --detach --name test --privileged --cgroupns=host \
+            --volume=/sys/fs/cgroup:/sys/fs/cgroup:rw \
+            --volume="$PWD":/playbook:ro \
+            "geerlingguy/docker-${{ matrix.distro }}-ansible:latest"
+          # wait until systemd is up
+          for i in $(seq 1 30); do
+            state=$(docker exec test systemctl is-system-running 2>/dev/null || true)
+            case "$state" in running|degraded) break ;; esac
+            sleep 2
+          done
+          docker exec test ansible --version
+
+      - name: Run playbook
+        run: >
+          docker exec -w /playbook test
+          ansible-playbook -i tests/inventory site.yml -e @tests/ci-vars.yml
+
+      - name: Idempotence check
+        run: |
+          docker exec -w /playbook test \
+            ansible-playbook -i tests/inventory site.yml -e @tests/ci-vars.yml | tee /tmp/second-run.log
+          grep -qE 'changed=0 +unreachable=0 +failed=0' /tmp/second-run.log \
+            || { echo "::error::Second run reported changes - playbook is not idempotent"; exit 1; }
+
+      - name: Smoke test
+        run: |
+          docker exec test curl -fsS http://127.0.0.1:8080/api/health
+          docker exec test systemctl is-enabled scrutiny-collector.timer
+
+      - name: Service logs
+        if: failure()
+        run: |
+          docker exec test journalctl -u influxdb -u scrutiny-web --no-pager -n 100 || true

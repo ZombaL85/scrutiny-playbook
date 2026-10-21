@@ -5,6 +5,8 @@
   hosts: scrutiny_web
   become: true
   roles:
+    - role: preflight
+      tags: [always]
     - role: influxdb
       when: scrutiny_influxdb_install | bool
       tags: [influxdb]
@@ -15,6 +17,8 @@
   hosts: scrutiny_collector
   become: true
   roles:
+    - role: preflight
+      tags: [always]
     - role: collector
       tags: [collector]
 

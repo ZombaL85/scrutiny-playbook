@@ -49,6 +49,11 @@
   ansible.builtin.set_fact:
     scrutiny_web_asset: "scrutiny-web-linux-{{ scrutiny_arch_map[ansible_architecture] }}"
 
+- name: Software - Install iproute (provides ss, used for verification)
+  ansible.builtin.package:
+    name: "{{ 'iproute2' if ansible_os_family == 'Debian' else 'iproute' }}"
+    state: present
+
 # User
 - name: User | Create Scrutiny system group
   ansible.builtin.group:
