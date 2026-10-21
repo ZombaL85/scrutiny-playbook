@@ -27,16 +27,12 @@ Supported operating systems (both roles). CI tests every push on Debian, Ubuntu 
 |---|---|
 | Debian (incl. Raspberry Pi OS, Proxmox VE) | 12 (bookworm), 13 (trixie) |
 | Ubuntu LTS | 22.04, 24.04, 26.04 |
-| RHEL / Rocky Linux / AlmaLinux / Oracle Linux | 8, 9, 10 |
-| CentOS Stream | 9, 10 |
+| RHEL / Rocky Linux / AlmaLinux / Oracle Linux | 10 |
+| CentOS Stream | 10 |
 
-Other Debian- or Red Hat-family systems (e.g. Debian 11, non-LTS Ubuntu, Fedora) only trigger a warning;
+Other Debian- or Red Hat-family systems (e.g. EL8/EL9, Debian 11, non-LTS Ubuntu, Fedora) are not tested and only trigger a warning;
 set `scrutiny_allow_untested_platforms: false` to make them fail instead. The list lives in
 `scrutiny_tested_platforms` in `group_vars/all/main.yml`.
-
-> **EL8 targets:** ansible-core 2.17+ no longer supports Python 3.6, which is the system Python
-> (and the only one with `dnf` bindings) on RHEL/Rocky/Alma 8. Use ansible-core 2.16 on the
-> control machine if you manage EL8 hosts.
 
 ## Getting Started
 
