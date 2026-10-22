@@ -28,3 +28,15 @@ scrutiny_healthchecks_base_url: "https://hc-ping.com"
 scrutiny_healthchecks_slug: "scrutiny_{{ ansible_facts['hostname'] | lower | regex_replace('[^a-z0-9_-]', '-') }}"
 # Create the check automatically on the first ping if it does not exist.
 scrutiny_healthchecks_auto_create: true
+
+# Manage the check (schedule, grace, time zone) through the Healthchecks
+# Management API. Enabled when scrutiny_healthchecks_api_key (a read-write
+# project API key, Project Settings -> API Access) is set in the vault.
+scrutiny_healthchecks_api_url: "https://healthchecks.io/api/v3"
+# Cron expression in scrutiny_healthchecks_tz - keep it in line with
+# scrutiny_collector_schedule (default: daily at 01:00).
+scrutiny_healthchecks_schedule: "0 1 * * *"
+# Seconds; must cover scrutiny_collector_randomized_delay plus the run time.
+scrutiny_healthchecks_grace: 1800
+# IANA time zone name; "" = the host's time zone (the timer runs in it).
+scrutiny_healthchecks_tz: "Europe/Warsaw"

@@ -77,11 +77,102 @@
 - name: Healthchecks - Install the ping helper
   ansible.builtin.copy:
     src: scrutiny-healthcheck-ping
-    dest: /usr/local/libexec/scrutiny-healthcheck-ping
+    dest: /usr/local/sbin/scrutiny-healthcheck-ping
     owner: root
     group: root
     mode: "0755"
   when: scrutiny_healthchecks_enabled | bool
+
+# Check management through the API runs from the control node.
+- name: Healthchecks - Read the host time zone
+  ansible.builtin.command:
+    cmd: timedatectl show --property=Timezone --value
+  register: scrutiny_host_tz
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - scrutiny_healthchecks_enabled | bool
+    - scrutiny_healthchecks_api_key | default('') | length > 0
+    - scrutiny_healthchecks_tz | length == 0
+
+- name: Healthchecks - Set the desired check settings
+  ansible.builtin.set_fact:
+    scrutiny_healthchecks_desired:
+      schedule: "{{ scrutiny_healthchecks_schedule }}"
+      tz: >-
+        {{ scrutiny_healthchecks_tz if scrutiny_healthchecks_tz | length > 0
+           else (scrutiny_host_tz.stdout | default('') | trim or 'UTC') }}
+      grace: "{{ scrutiny_healthchecks_grace | int }}"
+  when:
+    - scrutiny_healthchecks_enabled | bool
+    - scrutiny_healthchecks_api_key | default('') | length > 0
+
+- name: Healthchecks - Look up the check
+  ansible.builtin.uri:
+    url: "{{ scrutiny_healthchecks_api_url | regex_replace('/+$', '') }}/checks/?slug={{ scrutiny_healthchecks_slug }}"
+    headers:
+      X-Api-Key: "{{ scrutiny_healthchecks_api_key }}"
+    timeout: 15
+  register: scrutiny_healthchecks_lookup
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  no_log: true
+  when: scrutiny_healthchecks_desired is defined
+
+# Read-only keys can list checks (without update_url) but get 401 on writes.
+- name: Healthchecks - Check that the API key is not read-only
+  ansible.builtin.assert:
+    that: >-
+      scrutiny_healthchecks_lookup.json.checks | length == 0
+      or 'update_url' in scrutiny_healthchecks_lookup.json.checks | first
+    fail_msg: >-
+      scrutiny_healthchecks_api_key is a read-only key. Use a read-write project
+      API key (Project Settings -> API Access).
+    quiet: true
+  when: scrutiny_healthchecks_desired is defined
+
+- name: Healthchecks - Compare the check with the desired settings
+  ansible.builtin.set_fact:
+    # Only the managed fields; {} when the check does not exist yet.
+    scrutiny_healthchecks_current: >-
+      {{ scrutiny_healthchecks_lookup.json.checks | first | default({})
+         | dict2items | selectattr('key', 'in', ['schedule', 'tz', 'grace']) | items2dict }}
+  when: scrutiny_healthchecks_desired is defined
+
+- name: Healthchecks - Show the pending check change
+  ansible.builtin.debug:
+    msg:
+      check: "{{ scrutiny_healthchecks_slug }}"
+      current: "{{ scrutiny_healthchecks_current }}"
+      desired: "{{ scrutiny_healthchecks_desired }}"
+  when:
+    - scrutiny_healthchecks_desired is defined
+    - scrutiny_healthchecks_current != scrutiny_healthchecks_desired
+
+# "unique: [slug]" updates an existing check instead of creating a duplicate.
+# A new check gets all of the project's integrations, like one created by a ping.
+- name: Healthchecks - Create or update the check
+  ansible.builtin.uri:
+    url: "{{ scrutiny_healthchecks_api_url | regex_replace('/+$', '') }}/checks/"
+    method: POST
+    headers:
+      X-Api-Key: "{{ scrutiny_healthchecks_api_key }}"
+    body_format: json
+    body: >-
+      {{ scrutiny_healthchecks_desired
+         | combine({'slug': scrutiny_healthchecks_slug, 'unique': ['slug']})
+         | combine({'name': scrutiny_healthchecks_slug, 'channels': '*'} if not scrutiny_healthchecks_current else {}) }}
+    status_code: [200, 201]
+    timeout: 15
+  changed_when: true
+  delegate_to: localhost
+  become: false
+  no_log: true
+  when:
+    - scrutiny_healthchecks_desired is defined
+    - scrutiny_healthchecks_current != scrutiny_healthchecks_desired
 
 - name: Healthchecks - Remove files when disabled
   ansible.builtin.file:
@@ -89,7 +180,7 @@
     state: absent
   loop:
     - /etc/scrutiny/healthcheck.env
-    - /usr/local/libexec/scrutiny-healthcheck-ping
+    - /usr/local/sbin/scrutiny-healthcheck-ping
   when: not (scrutiny_healthchecks_enabled | bool)
 
 - name: Systemd - Create collector service and timer
@@ -102,16 +193,19 @@
   loop:
     - scrutiny-collector.service
     - scrutiny-collector.timer
+  register: scrutiny_collector_units
   notify: Reload systemd
 
 - name: Systemd - Apply unit changes
   ansible.builtin.meta: flush_handlers
 
+# In check mode new/changed units are not written yet, so systemd cannot find them.
 - name: Systemd - Enable and start the collector timer
   ansible.builtin.systemd_service:
     name: scrutiny-collector.timer
     enabled: true
     state: started
+  when: not (ansible_check_mode and scrutiny_collector_units is changed)
 
 # Clean-up after older versions of this playbook (cron-based)
 - name: Cleanup - Check whether crontab is available

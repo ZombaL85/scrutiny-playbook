@@ -113,9 +113,29 @@ scrutiny_healthchecks_ping_key: "<project ping key>"
 ```
 
 The slug defaults to `scrutiny_<hostname>` (override per host with `scrutiny_healthchecks_slug` in `host_vars`).
-Missing checks are created on the first ping (`scrutiny_healthchecks_auto_create`). Set each check's schedule to
-match `scrutiny_collector_schedule` - for the default daily run at 01:00 use cron `0 1 * * *` with a grace time
+Missing checks are created on the first ping (`scrutiny_healthchecks_auto_create`). Each check's schedule must
+match `scrutiny_collector_schedule` - for the default daily run at 01:00 that is cron `0 1 * * *` with a grace time
 above the 15 minute randomized delay, e.g. 30 minutes.
+
+To let the playbook set this up, add a read-write project API key (Project Settings -> API Access) to the vault.
+The check is then created or updated from the control node whenever its schedule, grace or time zone differ:
+
+```yaml
+# group_vars/all/main.yml
+scrutiny_healthchecks_api_url: "http://healthchecks.example.lan:8000/api/v3"
+# group_vars/all/vault.yml
+scrutiny_healthchecks_api_key: "<read-write API key>"
+# host_vars/<host>.yml - e.g. an hourly collector
+scrutiny_collector_schedule: hourly
+scrutiny_healthchecks_schedule: "0 * * * *"
+```
+
+| Variable | Default | Description |
+|---|---|---|
+| `scrutiny_healthchecks_api_url` | `https://healthchecks.io/api/v3` | Management API base URL |
+| `scrutiny_healthchecks_schedule` | `0 1 * * *` | Check's cron schedule |
+| `scrutiny_healthchecks_grace` | `1800` | Grace time in seconds |
+| `scrutiny_healthchecks_tz` | `""` (host's time zone) | IANA time zone of the schedule |
 
 ### Upgrading Scrutiny
 

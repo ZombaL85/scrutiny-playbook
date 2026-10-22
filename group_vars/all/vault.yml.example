@@ -15,3 +15,6 @@ scrutiny_influxdb_token: "CHANGE-ME-generate-with-openssl-rand-hex-32"
 # Healthchecks project ping key (Project Settings -> Ping key),
 # only needed when scrutiny_healthchecks_enabled: true
 scrutiny_healthchecks_ping_key: "CHANGE-ME"
+# Optional read-write project API key (Project Settings -> API Access): lets the
+# playbook set each check's schedule, grace and time zone.
+# scrutiny_healthchecks_api_key: "CHANGE-ME"
