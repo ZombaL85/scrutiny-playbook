@@ -1,0 +1,6 @@
+---
+# For a scrutiny_version that has no entry in scrutiny_checksums, take the
+# SHA256 digests GitHub computed for the release assets. Pinned entries in
+# scrutiny_checksums always win; set to false to allow pinned versions only.
+scrutiny_checksums_from_github: true
+scrutiny_release_api_url: "https://api.github.com/repos/AnalogJ/scrutiny/releases/tags/{{ scrutiny_version }}"

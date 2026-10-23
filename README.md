@@ -139,7 +139,12 @@ scrutiny_healthchecks_schedule: "0 * * * *"
 
 ### Upgrading Scrutiny
 
-Set `scrutiny_version` and add the SHA256 digests of the new release assets to `scrutiny_checksums` (they are listed next to each asset on the GitHub release page), then re-run the playbook. Changed binaries are re-downloaded and the services restarted.
+Set `scrutiny_version` (e.g. `-e scrutiny_version=v0.9.6`) and re-run the playbook. Changed binaries are re-downloaded and the services restarted.
+
+Downloads are always checked against SHA256 digests. Digests pinned in `scrutiny_checksums` are used first; for any other
+version they are taken from the GitHub release (`scrutiny_checksums_from_github`, default `true` - GitHub computes them
+for every uploaded asset). To allow only reviewed versions, set it to `false` and pin the digests of each new release in
+`scrutiny_checksums` (they are listed next to each asset on the GitHub release page).
 
 ### Upgrading from an older version of this playbook
 

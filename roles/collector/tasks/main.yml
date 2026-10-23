@@ -11,7 +11,9 @@
 - name: Preflight | Check that checksums exist for this version
   ansible.builtin.assert:
     that: scrutiny_version in scrutiny_checksums
-    fail_msg: "Add SHA256 digests for {{ scrutiny_version }} to scrutiny_checksums in group_vars/all/main.yml"
+    fail_msg: >-
+      No SHA256 digests for {{ scrutiny_version }}: add them to scrutiny_checksums in
+      group_vars/all/main.yml or enable scrutiny_checksums_from_github.
     quiet: true
 
 - name: Set architecture-specific asset name

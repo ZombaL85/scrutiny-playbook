@@ -7,6 +7,49 @@
       is not supported - only Debian- and Red Hat-family systems are.
     quiet: true
 
+- name: Preflight | Check the Scrutiny version
+  ansible.builtin.assert:
+    that: scrutiny_version is match('^v[0-9]+[.][0-9]+[.][0-9]+')
+    fail_msg: "scrutiny_version must be a release tag such as v0.9.5 (got: '{{ scrutiny_version }}')."
+    quiet: true
+
+# Per host, not run_once: a host in both plays already has the digests as a fact
+# from the first one, and run_once would decide for all hosts from that host.
+- name: Preflight | Look up the release on GitHub
+  ansible.builtin.uri:
+    url: "{{ scrutiny_release_api_url }}"
+    headers:
+      Accept: application/vnd.github+json
+    timeout: 30
+    status_code: [200, 404]
+  register: scrutiny_release
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  when:
+    - scrutiny_version not in scrutiny_checksums
+    - scrutiny_checksums_from_github | bool
+
+- name: Preflight | Check that the release exists
+  ansible.builtin.assert:
+    that: scrutiny_release.status == 200
+    fail_msg: "Scrutiny release {{ scrutiny_version }} not found on GitHub."
+    quiet: true
+  when: scrutiny_release is not skipped
+
+- name: Preflight | Use the release asset digests from GitHub
+  ansible.builtin.set_fact:
+    scrutiny_checksums: >-
+      {{ scrutiny_checksums | combine({scrutiny_version: dict(
+           scrutiny_release_assets | map(attribute='name')
+           | zip(scrutiny_release_assets | map(attribute='digest') | map('regex_replace', '^sha256:', '')))}) }}
+  vars:
+    # Releases published before GitHub added digests have none.
+    scrutiny_release_assets: >-
+      {{ scrutiny_release.json.assets | selectattr('digest', 'defined')
+         | selectattr('digest', 'string') | selectattr('digest', 'match', '^sha256:') }}
+  when: scrutiny_release is not skipped
+
 - name: Preflight | Check service manager
   ansible.builtin.assert:
     that: ansible_facts['service_mgr'] == 'systemd'
