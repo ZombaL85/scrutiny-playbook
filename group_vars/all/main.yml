@@ -1,7 +1,8 @@
 ---
-# Scrutiny release to install. When bumping the version, add the matching
-# SHA256 digests below (they are shown next to each asset on the GitHub
-# release page). Downloads are verified, so a missing entry fails the run.
+# Scrutiny release to install (any release tag; override with
+# -e scrutiny_version=... or the Semaphore survey). Downloads are verified
+# against the digests below; for versions not listed here they are taken
+# from the GitHub release (scrutiny_checksums_from_github in roles/preflight).
 scrutiny_version: "v0.9.5"
 
 scrutiny_checksums:
